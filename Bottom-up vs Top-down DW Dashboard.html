@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bottom-up vs Top-down DW Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--ink:#16202c;--mute:#5d6b7b;--line:#dde3ea;--bu:#0b8a83;--bu2:#d6f2ef;--td:#5a47d6;--td2:#e4e0fb;--warn:#c2410c;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e141b;--card:#171f29;--ink:#e8edf3;--mute:#9aa8b8;--line:#2a3542;--bu:#3fd0c7;--bu2:#0f3a38;--td:#9b8cff;--td2:#26224d;--warn:#fb923c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e141b;--card:#171f29;--ink:#e8edf3;--mute:#9aa8b8;--line:#2a3542;--bu:#3fd0c7;--bu2:#0f3a38;--td:#9b8cff;--td2:#26224d;--warn:#fb923c;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 "Noto Sans Thai",system-ui,sans-serif}
+main{max-width:980px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:1.7rem;line-height:1.3;margin:8px 0 6px;font-weight:800}
+h2{font-size:1.2rem;margin:0 0 4px;font-weight:800}
+p{margin:0 0 10px}.mute{color:var(--mute);font-size:.92rem}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:16px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:.88rem}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+.lane{border-radius:12px;padding:14px;border:2px solid}
+.lane.bu{background:var(--bu2);border-color:var(--bu)}.lane.td{background:var(--td2);border-color:var(--td)}
+.lane h3{margin:0 0 8px;font-size:1.05rem}
+.bu h3{color:var(--bu)}.td h3{color:var(--td)}
+.step{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px dashed var(--line);font-size:.92rem;transition:opacity .25s}
+.step:first-of-type{border-top:0}
+.step .m{flex:0 0 58px;font-weight:600;color:var(--mute)}
+.step.off{opacity:.38}
+.step .ok{margin-left:auto;font-weight:800}
+.bu .ok{color:var(--bu)}.td .ok{color:var(--td)}
+.meter{height:10px;border-radius:6px;background:var(--line);overflow:hidden;margin:8px 0 4px}
+.meter i{display:block;height:100%;transition:width .3s}
+.bu .meter i{background:var(--bu)}.td .meter i{background:var(--td)}
+input[type=range]{width:100%;accent-color:var(--td);height:32px}
+.big{font-size:1.1rem;font-weight:800}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+button.tab{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 14px;cursor:pointer}
+button.tab[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--td);outline-offset:2px}
+.row{display:grid;grid-template-columns:minmax(120px,1.2fr) 3fr;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:.92rem}
+.bars{display:grid;gap:4px}
+.bar{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--mute)}
+.bar b{display:block;height:12px;border-radius:4px}
+.bar.bu b{background:var(--bu)}.bar.td b{background:var(--td)}
+pre{margin:0;padding:12px;border-radius:10px;background:var(--bg);border:1px solid var(--line);overflow-x:auto;font:.82rem/1.5 ui-monospace,Menlo,monospace}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:.85rem;margin:6px 0 10px}
+.box{border:1px solid currentColor;border-radius:8px;padding:3px 9px;background:var(--card);color:var(--ink)}
+.arrow{color:var(--mute)}
+.pick{display:grid;gap:10px;grid-template-columns:1fr 1fr}@media(max-width:700px){.pick{grid-template-columns:1fr}}
+ul{margin:6px 0 0;padding-left:20px}
+</style>
+</head>
+<body>
+<main>
+<h1>Bottom-up (Kimball) เทียบ Top-down (Inmon)<br><span class="mute" style="font-weight:400">จากข้อมูลต้นทางชุดเดียวกัน</span></h1>
+<p class="mute">ตัวอย่างสมมติ: ร้านค้าปลีกที่มี 4 ระบบต้นทาง ต้องการรายงานยอดขาย สต็อก และลูกค้า ลองเลื่อนแถบเวลาเพื่อดูว่าแต่ละแนวทางส่งมอบอะไรให้ผู้ใช้ได้เมื่อไหร่</p>
+
+<section>
+<h2>ข้อมูลต้นทางเดียวกัน</h2>
+<div class="chips"><span class="chip">POS (ขายหน้าร้าน)</span><span class="chip">E-commerce</span><span class="chip">ERP (สต็อก/จัดซื้อ)</span><span class="chip">CRM (ลูกค้า)</span></div>
+<p class="mute" style="margin-top:10px">ทั้งสองแนวทางดึงจากแหล่งเดียวกัน ต่างกันที่ลำดับการสร้างและรูปแบบการจัดเก็บ</p>
+</section>
+
+<section>
+<h2>เส้นทางการสร้าง</h2>
+<div class="cols">
+<div><div class="flow" style="color:var(--bu)"><b>Bottom-up</b><span class="box">Source</span><span class="arrow">→</span><span class="box">Staging</span><span class="arrow">→</span><span class="box">Data Mart (Star)</span><span class="arrow">→</span><span class="box">Conformed Dim / Bus</span></div>
+<p class="mute">สร้าง Data Mart ทีละกระบวนการธุรกิจ แล้วเชื่อมกันด้วย conformed dimensions จนได้มุมมององค์กร</p></div>
+<div><div class="flow" style="color:var(--td)"><b>Top-down</b><span class="box">Source</span><span class="arrow">→</span><span class="box">Staging</span><span class="arrow">→</span><span class="box">Enterprise DW (3NF)</span><span class="arrow">→</span><span class="box">Dependent Data Mart</span></div>
+<p class="mute">สร้างคลังข้อมูลองค์กรแบบ normalized ให้ครบก่อน แล้วค่อยแตก Data Mart ออกไปให้แต่ละแผนก</p></div>
+</div>
+</section>
+
+<section>
+<h2>เส้นเวลา: ผู้ใช้ได้อะไรเมื่อไหร่</h2>
+<label for="t" class="mute">เลื่อนเพื่อเลือกเดือนของโครงการ</label>
+<input id="t" type="range" min="0" max="24" value="6" step="1">
+<p class="big" id="tl">เดือนที่ 6</p>
+<div class="cols">
+<div class="lane bu"><h3>Bottom-up</h3><div id="bu"></div><div class="meter"><i id="buM"></i></div><div class="mute" id="buT"></div></div>
+<div class="lane td"><h3>Top-down</h3><div id="td"></div><div class="meter"><i id="tdM"></i></div><div class="mute" id="tdT"></div></div>
+</div>
+<p class="mute" style="margin-top:10px">ตัวเลขเดือนเป็นค่าสมมติเพื่อแสดงแนวโน้ม โครงการจริงขึ้นกับขนาดทีมและความซับซ้อนของข้อมูล</p>
+</section>
+
+<section>
+<h2>เปรียบเทียบคุณลักษณะ (คะแนน 1–5 ยิ่งมากยิ่งได้เปรียบ)</h2>
+<div id="metrics"></div>
+<p class="mute" style="margin-top:10px">คะแนนเป็นการประเมินเชิงแนวคิดเพื่อการเรียนรู้ ไม่ได้มาจากการวัดจริง</p>
+</section>
+
+<section>
+<h2>คำถามเดียวกัน ต่างโครงสร้าง</h2>
+<p>“ยอดขายรวมแยกตามหมวดสินค้าและเดือน”</p>
+<div class="tabs" role="group" aria-label="เลือกแนวทาง">
+<button class="tab" data-k="bu" aria-pressed="true">Bottom-up (Star)</button>
+<button class="tab" data-k="td" aria-pressed="false">Top-down (3NF)</button>
+</div>
+<div id="sql"></div>
+</section>
+
+<section>
+<h2>เลือกแนวทางไหนเมื่อไหร่</h2>
+<div class="pick">
+<div class="lane bu"><h3>เหมาะกับ Bottom-up</h3><ul><li>ต้องเห็นผลเร็ว งบและทีมจำกัด</li><li>ผู้ใช้ธุรกิจต้องการ query เองได้ง่าย</li><li>วางแผนเพิ่ม Data Mart ทีละเรื่อง</li></ul><p class="mute" style="margin-top:8px">ข้อควรระวัง: ถ้าไม่คุม conformed dimensions จะเกิด data mart แยกเกาะ</p></div>
+<div class="lane td"><h3>เหมาะกับ Top-down</h3><ul><li>องค์กรใหญ่ ต้องการข้อมูลกลางที่เป็นหนึ่งเดียว</li><li>มีทีมออกแบบข้อมูลและงบระยะยาว</li><li>มีหลายแผนกใช้ข้อมูลร่วมกันและต้องตรงกัน</li></ul><p class="mute" style="margin-top:8px">ข้อควรระวัง: ใช้เวลานานกว่าจะเห็นผล และมีความเสี่ยงโครงการบานปลาย</p></div>
+</div>
+</section>
+</main>
+<script>
+var BU=[[3,"Sales Mart (Star Schema)"],[6,"Inventory Mart"],[9,"Customer Mart"],[12,"เชื่อมด้วย Conformed Dimensions ได้มุมมององค์กร"]];
+var TD=[[12,"Enterprise DW (3NF) เสร็จ ยังไม่มีรายงานให้ใช้"],[15,"Sales Mart"],[18,"Inventory Mart"],[21,"Customer Mart"]];
+function lane(id,arr,m,mid,tid){
+  var h="",n=0;
+  arr.forEach(function(s){var on=m>=s[0];h+='<div class="step'+(on?'':' off')+'"><span class="m">เดือน '+s[0]+'</span><span>'+s[1]+'</span>'+(on?'<span class="ok" aria-label="เสร็จแล้ว">✓</span>':'')+'</div>';
+    if(on&&s[1].indexOf("Mart")>-1&&s[1].indexOf("เสร็จ")<0)n++;});
+  document.getElementById(id).innerHTML=h;
+  document.getElementById(mid).style.width=(n/3*100)+"%";
+  document.getElementById(tid).textContent=n===0?"ผู้ใช้ธุรกิจยังไม่มีรายงานให้ใช้":"ผู้ใช้ใช้งานได้ "+n+" จาก 3 หัวข้อ (ยอดขาย/สต็อก/ลูกค้า)";
+}
+function upd(){var m=+document.getElementById("t").value;document.getElementById("tl").textContent="เดือนที่ "+m;
+  lane("bu",BU,m,"buM","buT");lane("td",TD,m,"tdM","tdT");}
+document.getElementById("t").addEventListener("input",upd);upd();
+
+var M=[["ความเร็วในการเห็นผลครั้งแรก",5,2],["ต้นทุนและความเสี่ยงช่วงเริ่มต้น",4,2],["ความง่ายสำหรับผู้ใช้ธุรกิจ",5,3],["ความง่ายในการออกแบบเริ่มต้น",4,2],["ความสอดคล้องของข้อมูลทั้งองค์กร",3,5],["ลดข้อมูลซ้ำซ้อน",3,5]];
+document.getElementById("metrics").innerHTML=M.map(function(r){return '<div class="row"><div>'+r[0]+'</div><div class="bars"><div class="bar bu"><b style="width:'+r[1]*16+'%"></b>Bottom-up '+r[1]+'</div><div class="bar td"><b style="width:'+r[2]*16+'%"></b>Top-down '+r[2]+'</div></div></div>';}).join("");
+
+var SQL={bu:'<pre>-- Star Schema: join เพียง 2 ตาราง\nSELECT d.month, p.category, SUM(f.sales_amount) AS sales\nFROM fact_sales f\nJOIN dim_date d ON f.date_key = d.date_key\nJOIN dim_product p ON f.product_key = p.product_key\nGROUP BY d.month, p.category;</pre><p class="mute" style="margin-top:8px">dimension แบบ denormalized (หมวดสินค้าอยู่ในตารางเดียว) จึง query สั้นและเร็ว ผู้ใช้ธุรกิจอ่านเข้าใจง่าย</p>',
+td:'<pre>-- 3NF: join หลายตารางตามความสัมพันธ์\nSELECT YEAR(o.order_date) y, MONTH(o.order_date) m, c.category_name,\n       SUM(oi.qty * oi.unit_price) AS sales\nFROM orders o\nJOIN order_items oi ON o.order_id = oi.order_id\nJOIN products p ON oi.product_id = p.product_id\nJOIN subcategories s ON p.subcat_id = s.subcat_id\nJOIN categories c ON s.category_id = c.category_id\nGROUP BY y, m, c.category_name;</pre><p class="mute" style="margin-top:8px">ข้อมูลแยกตารางตามกฎ normalization ลดความซ้ำซ้อนและคุมความถูกต้องได้ดี แต่ query ซับซ้อนกว่า จึงมักสร้าง Data Mart ไว้ให้ผู้ใช้ปลายทางอีกชั้น</p>'};
+function showSql(k){document.getElementById("sql").innerHTML=SQL[k];document.querySelectorAll("button.tab").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.k===k)});}
+document.querySelectorAll("button.tab").forEach(function(b){b.addEventListener("click",function(){showSql(b.dataset.k)})});showSql("bu");
+</script>
+</body>
+</html>
